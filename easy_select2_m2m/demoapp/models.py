@@ -11,4 +11,4 @@ class Parent(models.Model):
     tags = models.ManyToManyField(to='Tag', null=True, blank=True, symmetrical=False)
 
     def __str__(self):
-        return ",".join(self.tags.all())
+        return ",".join([unicode(t) for t in self.tags.all()])

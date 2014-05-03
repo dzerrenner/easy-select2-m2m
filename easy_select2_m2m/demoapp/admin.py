@@ -16,43 +16,41 @@ class ParentForm(forms.ModelForm):
         self.fields['tags'].widget = Select2TextInput(
             select2attrs={
                 'tags': get_choices(),
-                # 'width': '250px',
             },
         )
+        self.initial = {
+            'tags': ', '.join([unicode(t) for t in self.instance.tags.all()]),
+        }
 
         # remove the "Use Ctrl for multiple selections" help text
         self.fields['tags'].help_text = ""
 
-    def clean_tags(self):
-        """
-        this only seems to be called with an empty input, .split fails in this case, because name_list is a QuerySet.
-        """
+    def full_clean(self):
+        #
+        # Tags input should be a list of ids (ints), but for now
+        # it is list of single unicode strings, so we should convert
+        # it to correct format.
+        #
+        # Althought this approach is working, it is better to create
+        # custom field type that will do appropriate conversions.
+        #
+        tags_names = self.data.get('tags')
+        if tags_names is not None:
+            tags_names = tags_names.split(',')
 
-        print("clean_tags")
-        data = self.cleaned_data
-        name_list = data.get('tags', None)
-        print("name_list", name_list)
-        print(type(name_list))
-        if name_list is not None:
-            for name in name_list.split(','):
+            tags_ids = []
+            for name in tags_names:
                 try:
-                    name = Tag.objects.get(name=name)
+                    # It is possible to use get_or_create here.
+                    t = Tag.objects.get(name=name)
                 except Tag.DoesNotExist:
-                    Tag(name=name).save()
-        return name_list
+                    pass
+                else:
+                    tags_ids.append(unicode(t.id))
 
-    def save(self, commit=True):
-        print("save")
-        instance = super(ParentForm, self).save(commit=False)
-        name_list = self.cleaned_data.get('pre_names_male', None)
-        if name_list is not None:
-            for name in name_list.split(','):
-                name_obj = Tag.objects.get(name=name)
-                instance.pre_names_male.add(name_obj)
+            self.data['tags'] = tags_ids
 
-        if commit:
-            instance.save()
-        return instance
+        super(ParentForm, self).full_clean()
 
 
 class ParentAdmin(admin.ModelAdmin):
