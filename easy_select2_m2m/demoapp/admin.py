@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django import forms
 from easy_select2 import Select2TextInput
+import six
 from demoapp.models import Tag, Parent
 
 
@@ -19,11 +20,14 @@ class ParentForm(forms.ModelForm):
             },
         )
         self.initial = {
-            'tags': ', '.join([unicode(t) for t in self.instance.tags.all()]),
+            'tags': ', '.join([six.u(t.name) for t in self.instance.tags.all()]),
         }
 
         # remove the "Use Ctrl for multiple selections" help text
         self.fields['tags'].help_text = ""
+
+        # option to create tags if there is one in the list which is not created yet
+        self.fields['tags'].create = True
 
     def full_clean(self):
         #
@@ -42,11 +46,14 @@ class ParentForm(forms.ModelForm):
             for name in tags_names:
                 try:
                     # It is possible to use get_or_create here.
-                    t = Tag.objects.get(name=name)
+                    if self.fields['tags'].create:
+                        t, created = Tag.objects.get_or_create(name=name)
+                    else:
+                        t = Tag.objects.get(name=name)
                 except Tag.DoesNotExist:
                     pass
                 else:
-                    tags_ids.append(unicode(t.id))
+                    tags_ids.append(str(t.id))
 
             self.data['tags'] = tags_ids
 

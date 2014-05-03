@@ -1,5 +1,5 @@
 from django.db import models
-
+import six
 
 class Tag(models.Model):
     name = models.CharField(max_length=127)
@@ -11,4 +11,4 @@ class Parent(models.Model):
     tags = models.ManyToManyField(to='Tag', null=True, blank=True, symmetrical=False)
 
     def __str__(self):
-        return ",".join([unicode(t) for t in self.tags.all()])
+        return ",".join([six.u(t.name) for t in self.tags.all()])
